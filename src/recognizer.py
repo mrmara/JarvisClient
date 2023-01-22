@@ -1,5 +1,6 @@
 from unicodedata import name
-from include.config import activation_words
+from src.speaker import speaker
+from include.config import activation_words, timeout_activation
 import speech_recognition as sr
 import include.customErrors as er
 import logging
@@ -29,6 +30,8 @@ class recognizer():
         logging.basicConfig(format='%(name)s - %(levelname)s - %(message)s',level=logging.DEBUG)
         self.mqtt_client = MQTTclient(name)
         self.logger = logging.getLogger(name)
+        self.speaker = speaker(welcome = False)
+        self.commands_buffer=[]
         if initMic:
             self.init_microphone()
         if initActivationWordListener:
@@ -37,24 +40,27 @@ class recognizer():
 
     
     def recognize(self, audio_data) -> 'str':
-        if self.apiType == 1:
-            return self.engine.recognize_bing(audio_data=audio_data,key=self.key,language=self.language,show_all=self.show_all)
-        elif self.apiType == 2:
-            self.logger.debug("Recognizing with Google")
-            return self.engine.recognize_google(audio_data=audio_data,key=self.key, language=self.language,show_all=self.show_all)
-        elif self.apiType == 3:
-            return self.engine.recognize_google_cloud(audio_data=audio_data, credentials_json=self.credentials, language=self.language)
-        elif self.apiType == 4:
-            self.logger.debug("Recognizing with Houndify")
-            return self.engine.recognize_houndify(audio_data=audio_data, client_id=self.client_id, client_key=self.client_key, show_all=self.show_all)
-        elif self.apiType == 5:
-            return self.engine.recognize_ibm(audio_data=audio_data, username=self.username, password=self.password, language=self.language, show_all=self.how_all)
-        elif self.apiType == 6:
-            return self.engine.recognize_sphinx(audio_data, language=self.language, keyword_entries=self.keyword_entries, grammar=self.grammar, show_all=self.show_all)
-        elif self.apiType == 7:
-            return self.engine.recognize_wit(audio_data, key=self.key, show_all=False)
-        else:
-            raise er.RecognizerAPIError()
+        try:
+            if self.apiType == 1:
+                return self.engine.recognize_bing(audio_data=audio_data,key=self.key,language=self.language,show_all=self.show_all)
+            elif self.apiType == 2:
+                self.logger.debug("Recognizing with Google")
+                return self.engine.recognize_google(audio_data=audio_data,key=self.key, language=self.language,show_all=self.show_all)
+            elif self.apiType == 3:
+                return self.engine.recognize_google_cloud(audio_data=audio_data, credentials_json=self.credentials, language=self.language)
+            elif self.apiType == 4:
+                self.logger.debug("Recognizing with Houndify")
+                return self.engine.recognize_houndify(audio_data=audio_data, client_id=self.client_id, client_key=self.client_key, show_all=self.show_all)
+            elif self.apiType == 5:
+                return self.engine.recognize_ibm(audio_data=audio_data, username=self.username, password=self.password, language=self.language, show_all=self.how_all)
+            elif self.apiType == 6:
+                return self.engine.recognize_sphinx(audio_data, language=self.language, keyword_entries=self.keyword_entries, grammar=self.grammar, show_all=self.show_all)
+            elif self.apiType == 7:
+                return self.engine.recognize_wit(audio_data, key=self.key, show_all=False)
+            else:
+                raise er.RecognizerAPIError()
+        except:
+            return None
 
     def AudioFile(self, source: 'path or stream') -> 'AudioFile':
         self.audioIn = sr.AudioFile(source)
@@ -70,22 +76,48 @@ class recognizer():
         
     def activation_word_listener(self):
         while(True):
-            self.listen()
-            self.last_recognized_rec = self.recognize(self.last_rec)
-            self.logger.debug(f"last record is {self.last_recognized_rec}")
-            for word in self.last_recognized_rec.split(" "):
-                if word in activation_words:
-                    self.logger.info("Jarvis is awake")
-                    self.listen_and_recognize()
-    def listen(self):
+            rec = self.listen(timeout_activation)
+            if ( rec!= None):
+                recognized_rec = self.recognize(rec)
+                self.logger.debug(f"last record is {recognized_rec}")
+                if recognized_rec != None:
+                    for word in recognized_rec.split(" "):
+                        if word in activation_words:
+                            self.logger.info("Jarvis is awake")
+                            self.speaker.say("At your commands sir")
+                            self.commands_buffer.append(self.listen_and_recognize())
+            else: 
+                pass
+    def listen(self, timeout=10):
         self.logger.debug("I am listening")
         with self.microphone as source:
-            self.last_rec=self.engine.listen(source)
-        self.logger.debug("I stopped listening")
-        return self.last_rec
+            try:
+                self.engine.adjust_for_ambient_noise(source)
+                self.last_rec=self.engine.listen(source, timeout=3, phrase_time_limit=timeout)
+                self.logger.debug("I stopped listening")
+                return self.last_rec
+            except sr.WaitTimeoutError:
+                self.logger.debug("sending activation rec due to timeout")
+                return None
 
+    def buffer_listening(self):
+        pass
+    
     def listen_and_recognize(self):
         self.logger.debug("Understanding command")
         com = self.recognize(self.listen())
-        self.logger.debug(com)
-        return com.split(" ")
+        self.logger.debug(f"last command is {com}")
+        if com != None:
+            com = com.split(" ")
+        else:
+            self.listen_and_recognize()
+        return com
+    
+    def get_last_command(self):
+        if len(self.commands_buffer) > 0:
+            cmd =  self.commands_buffer.pop()
+        else:
+            cmd = None
+                   
+        return cmd, len(self.commands_buffer)
+

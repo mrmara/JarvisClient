@@ -1,3 +1,5 @@
 
 from src.jclient import jclient
-jclient()
+j = jclient()
+while True:
+    j.spin()
