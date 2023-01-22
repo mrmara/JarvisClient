@@ -30,7 +30,7 @@ class jclient():
         self.logger.debug("published %s on topic %s", com, topic)
     
     def say_response(self, client, userdata, message):
-        self.logger.debug("reponse is %s",str(message.payload.decode("utf-8")))
+        self.logger.debug("response is %s",str(message.payload.decode("utf-8")))
         self.speaker_engine.add_to_queue(str(message.payload.decode("utf-8")))
         self.speaker_engine.speak_queue()
     
