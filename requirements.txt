@@ -4,3 +4,6 @@ sudo apt-get install python3-pyaudio
 sudo pip install AWSIoTPythonSDK
 sudo apt install espeak ffmpeg libespeak1
 sudo pip install gTTS pyttsx3 playsound
+sudo apt install jackd2
+sudo apt install multimedia-jack
+sudo pip install sounddevice

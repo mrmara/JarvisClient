@@ -2,6 +2,7 @@ from unicodedata import name
 from src.speaker import speaker
 from include.config import activation_words, timeout_activation
 import speech_recognition as sr
+import sounddevice
 import include.customErrors as er
 import logging
 import threading
@@ -71,7 +72,7 @@ class recognizer():
         return self.audioRec
     
     def init_microphone(self) -> "Microphone":
-        self.microphone = sr.Microphone(device_index=13)
+        self.microphone = sr.Microphone()
         return self.microphone
         
     def activation_word_listener(self):

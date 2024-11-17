@@ -1,0 +1,1 @@
+./arduino-cli compile --fqbn arduino:avr:uno --port /dev/ttyACM0 --upload $1
