@@ -12,14 +12,15 @@ class jclient():
     
     name="jarvis_kitchen"
 
-    def __init__(self) -> None:
+    def __init__(self, test = False) -> None:
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',level=logLevel, datefmt='%Y-%m-%d %H:%M:%S')
         self.logger = logging.getLogger(self.name)
-        self.listener_engine = recognizer(name=self.name, apiType=2,client_id=client_id,client_key=client_key,language='en-EN',initActivationWordListener=True)
-        self.speaker_engine = speaker(welcome=False)
         self.mqtt = MQTTclient(self.name)
         self.diagnostic={}
-        self.stay()
+        self.speaker_engine = speaker(welcome=False)
+        if not test:
+            self.listener_engine = recognizer(name=self.name, apiType=2,client_id=client_id,client_key=client_key,language='en-EN',initActivationWordListener=True)
+            self.stay()
 
     def invoke_command(self, com):
         self.logger.debug(com)
