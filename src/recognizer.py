@@ -78,7 +78,7 @@ class recognizer():
     def activation_word_listener(self):
         while(True):
             rec = self.listen(timeout_activation)
-            if ( rec!= None):
+            if (rec!= None):
                 recognized_rec = self.recognize(rec)
                 self.logger.debug(f"last record is {recognized_rec}")
                 if recognized_rec != None:
