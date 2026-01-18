@@ -7,8 +7,6 @@ import include.customErrors as er
 import logging
 import threading
 import time
-from src.myMqttClient import MQTTclient
-
 class recognizer():
 
     def __init__(self, name, apiType: 'bing, google, google_cloud, houndify, ibm, sphinx, wit', key=None, credentials=None, language='en-US',
@@ -29,7 +27,6 @@ class recognizer():
         self.keyword_entries=keyword_entries
         self.grammar=grammar
         logging.basicConfig(format='%(name)s - %(levelname)s - %(message)s',level=logging.DEBUG)
-        self.mqtt_client = MQTTclient(name)
         self.logger = logging.getLogger(name)
         self.speaker = speaker(welcome = False)
         self.commands_buffer=[]
@@ -72,8 +69,14 @@ class recognizer():
         return self.audioRec
     
     def init_microphone(self) -> "Microphone":
-        self.microphone = sr.Microphone()
-        return self.microphone
+        try:
+            self.microphone = sr.Microphone(3)
+            self.logger.info(f"Microphone initialized: {self.microphone}")
+            self.logger.debug(f"Available microphones: {sr.Microphone.list_working_microphones()}")
+            return self.microphone
+        except Exception as e:
+            self.logger.error(f"Failed to initialize microphone: {e}")
+            raise e
         
     def activation_word_listener(self):
         while(True):
@@ -91,15 +94,18 @@ class recognizer():
                 pass
     def listen(self, timeout=10):
         self.logger.debug("I am listening")
-        with self.microphone as source:
-            try:
+        try:
+            with self.microphone as source:
                 self.engine.adjust_for_ambient_noise(source)
-                self.last_rec=self.engine.listen(source, timeout=3, phrase_time_limit=timeout)
+                self.last_rec = self.engine.listen(source, timeout=3, phrase_time_limit=timeout)
                 self.logger.debug("I stopped listening")
                 return self.last_rec
-            except sr.WaitTimeoutError:
-                self.logger.debug("sending activation rec due to timeout")
-                return None
+        except sr.WaitTimeoutError:
+            self.logger.debug("sending activation rec due to timeout")
+            return self.last_rec
+        except Exception as e:
+            self.logger.error(f"Error in listening: {e}")
+            return None
 
     def buffer_listening(self):
         pass

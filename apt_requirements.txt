@@ -1,0 +1,7 @@
+sudo apt install python-is-python3
+sudo apt install python3-pyaudio
+sudo apt install espeak ffmpeg libespeak1
+sudo apt install jackd2
+sudo apt install multimedia-jack
+sudo apt install pulseaudio-utils
+sudo apt install pipewire-alsa pipewire-audio-client-libraries

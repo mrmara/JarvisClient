@@ -1,5 +1,12 @@
 from enum import unique
-from src.myMqttClient import MQTTclient
+import sys
+from pathlib import Path
+
+# Add the workspace root to Python path
+workspace_root = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(workspace_root))
+
+from mqtt_client import mqtt_client
 from src.recognizer import recognizer
 from src.speaker import speaker
 from include.houndify import client_id,client_key
@@ -15,7 +22,7 @@ class jclient():
     def __init__(self, test = False) -> None:
         logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',level=logLevel, datefmt='%Y-%m-%d %H:%M:%S')
         self.logger = logging.getLogger(self.name)
-        self.mqtt = MQTTclient(self.name)
+        self.mqtt = mqtt_client.MQTTClient(self.name, self.name)
         self.diagnostic={"start_time":time.time()}
         self.speaker_engine = speaker(welcome=False)
         if not test:
@@ -28,12 +35,15 @@ class jclient():
         return self.logger
     
     def invoke_command(self, com):
+        '''
+        Commands are sent to jarvis server for processing. Topic is:
+        jarvis_kitchen/command/request
+        '''
         self.logger.debug(com)
+        payload: dict = {"data": com}
         unique_effimeral_ID = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
-        topic = self.name + "/request/" + unique_effimeral_ID
-        self.mqtt.subscribe(self.name + "/response/" + unique_effimeral_ID, self.say_response)
-        self.mqtt.publish(topic, str(com), 1)
-        self.logger.debug("published %s on topic %s", com, topic)
+        topic = "request"
+        self.mqtt.publish_request_async("", payload, self.say_response, id=unique_effimeral_ID)
     
     def say_response(self, client, userdata, message):
         self.logger.debug("response is %s",str(message.payload.decode("utf-8")))
